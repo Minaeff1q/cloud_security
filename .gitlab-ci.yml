@@ -1,0 +1,68 @@
+default:
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - docker info
+
+stages:
+  - build
+  - test
+  - security
+  - deploy
+
+variables:
+  DOCKER_IMAGE: 'my_app'
+  GITLEAKS_VERSION: "8.18.2"
+
+build:
+  stage: build
+  script:
+    - docker login -u minaeff1q -p glpat-42sgcAo3sZzm_Rm1BQdV registry.gitlab.com
+    - docker build -t registry.gitlab.com/minaeff1q/devops/$DOCKER_IMAGE .
+    - docker push registry.gitlab.com/minaeff1q/devops/$DOCKER_IMAGE:latest
+  tags:
+    - minaeff1q
+
+test:
+  stage: test
+  script:
+    - echo "test1 passed"
+    - echo "test2 passed"
+    - echo "test3 passed"
+  tags:
+    - minaeff1q
+
+gitleaks_scan:
+  stage: security
+  image:
+    name: "zricethezav/gitleaks:$GITLEAKS_VERSION"
+    entrypoint: [""]
+  script:
+    - echo "Running Gitleaks scan"
+    - gitleaks --path . --verbose
+  only:
+    - main
+  tags:
+    - minaeff1q
+
+sonarqube_scan:
+  stage: security
+  image:
+    name: "sonarsource/sonar-scanner-cli:latest"
+    entrypoint: [""]
+  script:
+    - echo "Running SonarQube scan"
+    - sonar-scanner
+  only:
+    - main
+  tags:
+    - minaeff1q
+
+deploy:
+  stage: deploy
+  script:
+    - docker login -u minaeff1q -p glpat-42sgcAo3sZzm_Rm1BQdV registry.gitlab.com
+    - docker run -d -p 5000:5000 --name myweb-app registry.gitlab.com/minaeff1q/devops/$DOCKER_IMAGE
+  tags:
+    - minaeff1q
